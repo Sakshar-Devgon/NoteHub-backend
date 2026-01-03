@@ -8,5 +8,6 @@ import java.util.List;
 
 @Repository
 public interface NoteRepository extends JpaRepository<Note, Long> {
-    List<Note> findByIsTimeCapsuleFalse();
+    List<Note> findByIsTimeCapsuleFalseAndUserId(Long userId);
+    List<Note> findByUserId(Long userId);
 }
