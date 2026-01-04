@@ -20,6 +20,12 @@ public class NoteService {
         Note note = new Note();
         note.setTitle(dto.getTitle());
         note.setContent(dto.getContent());
+
+        // ✅ FIX THE BUG
+        note.setTimeCapsule(false);
+
+
+
         return noteRepository.save(note);
     }
 
