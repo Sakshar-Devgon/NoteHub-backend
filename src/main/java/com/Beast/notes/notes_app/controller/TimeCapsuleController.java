@@ -3,8 +3,10 @@ package com.Beast.notes.notes_app.controller;
 import com.Beast.notes.notes_app.dto.TimeCapsuleDto;
 import com.Beast.notes.notes_app.model.Note;
 import com.Beast.notes.notes_app.model.TimeCapsule;
+import com.Beast.notes.notes_app.model.User;
 import com.Beast.notes.notes_app.repository.NoteRepository;
 import com.Beast.notes.notes_app.repository.TimeCapsuleRepository;
+import com.Beast.notes.notes_app.repository.UserRepository;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,16 +23,28 @@ public class TimeCapsuleController {
 
     private final TimeCapsuleRepository capsuleRepo;
     private final NoteRepository noteRepo;
+    private final UserRepository userRepository;
 
     public TimeCapsuleController(TimeCapsuleRepository capsuleRepo,
-                                 NoteRepository noteRepo) {
+                                 NoteRepository noteRepo, UserRepository userRepository) {
         this.capsuleRepo = capsuleRepo;
         this.noteRepo = noteRepo;
+        this.userRepository = userRepository;
+    }
+
+    private User getOrCreateUser(String firebaseUid) {
+        return userRepository.findByFirebaseUid(firebaseUid)
+                .orElseGet(() -> {
+                    User newUser = new User();
+                    newUser.setFirebaseUid(firebaseUid);
+                    return userRepository.save(newUser);
+                });
     }
 
     @PostMapping("/{noteId}")
-    public String createCapsule(@PathVariable Long noteId, @RequestBody TimeCapsuleDto dto) {
-        Note note = noteRepo.findById(noteId)
+    public String createCapsule(@PathVariable Long noteId, @RequestBody TimeCapsuleDto dto, @RequestHeader("X-User-ID") String firebaseUid) {
+        User user = getOrCreateUser(firebaseUid);
+        Note note = noteRepo.findByIdAndUserId(noteId, user.getId())
                 .orElseThrow(() -> new RuntimeException("Note not found"));
 
         // Mark as time capsule note
@@ -57,8 +71,13 @@ public class TimeCapsuleController {
     }
 
     @GetMapping
-    public List<TimeCapsule> getAllCapsules() {
+    public List<TimeCapsule> getAllCapsules(@RequestHeader("X-User-ID") String firebaseUid) {
+        User user = getOrCreateUser(firebaseUid);
         List<TimeCapsule> capsules = capsuleRepo.findAll();
+        // Filter capsules by current user
+        capsules = capsules.stream()
+                .filter(capsule -> capsule.getNote().getUser().getId().equals(user.getId()))
+                .toList();
         capsules.forEach(capsule -> {
             if (capsule.getNote() != null) {
                 capsule.getNote().getTitle();
@@ -68,8 +87,11 @@ public class TimeCapsuleController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteCapsule(@PathVariable Long id) {
-        capsuleRepo.deleteById(id);
+    public void deleteCapsule(@PathVariable Long id, @RequestHeader("X-User-ID") String firebaseUid) {
+        User user = getOrCreateUser(firebaseUid);
+        capsuleRepo.findById(id)
+                .filter(capsule -> capsule.getNote().getUser().getId().equals(user.getId()))
+                .ifPresent(capsule -> capsuleRepo.deleteById(id));
     }
 
     @PostMapping("/{token}/claim")

@@ -19,25 +19,25 @@ public class NoteController {
     }
 
     @PostMapping
-    public ResponseEntity<Note> createNote(@RequestBody NoteDto dto) {
-        return ResponseEntity.ok(noteService.createNote(dto));
+    public ResponseEntity<Note> createNote(@RequestBody NoteDto dto, @RequestHeader("X-User-ID") String firebaseUid) {
+        return ResponseEntity.ok(noteService.createNote(dto, firebaseUid));
     }
 
     @GetMapping
-    public ResponseEntity<List<Note>> getAllNotes() {
-        return ResponseEntity.ok(noteService.getRegularNotes());
+    public ResponseEntity<List<Note>> getAllNotes(@RequestHeader("X-User-ID") String firebaseUid) {
+        return ResponseEntity.ok(noteService.getRegularNotes(firebaseUid));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Note> getNoteById(@PathVariable Long id) {
-        return noteService.getNoteById(id)
+    public ResponseEntity<Note> getNoteById(@PathVariable Long id, @RequestHeader("X-User-ID") String firebaseUid) {
+        return noteService.getNoteById(id, firebaseUid)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Note> updateNote(@PathVariable Long id, @RequestBody NoteDto dto) {
-        Note updated = noteService.updateNote(id, dto);
+    public ResponseEntity<Note> updateNote(@PathVariable Long id, @RequestBody NoteDto dto, @RequestHeader("X-User-ID") String firebaseUid) {
+        Note updated = noteService.updateNote(id, dto, firebaseUid);
         if (updated == null) {
             return ResponseEntity.notFound().build();
         }
@@ -45,8 +45,8 @@ public class NoteController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteNote(@PathVariable Long id) {
-        noteService.deleteNote(id);
+    public ResponseEntity<Void> deleteNote(@PathVariable Long id, @RequestHeader("X-User-ID") String firebaseUid) {
+        noteService.deleteNote(id, firebaseUid);
         return ResponseEntity.noContent().build();
     }
 }
