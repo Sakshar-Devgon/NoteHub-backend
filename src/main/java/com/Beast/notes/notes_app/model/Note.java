@@ -34,11 +34,6 @@ public class Note {
     @Column(nullable = false)
     private boolean isTimeCapsule = false;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnore
-    private User user;
-
     @OneToMany(mappedBy = "note", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<TimeCapsule> timeCapsules;

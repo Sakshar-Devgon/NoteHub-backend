@@ -3,11 +3,8 @@ package com.Beast.notes.notes_app.controller;
 import com.Beast.notes.notes_app.dto.TimeCapsuleDto;
 import com.Beast.notes.notes_app.model.Note;
 import com.Beast.notes.notes_app.model.TimeCapsule;
-import com.Beast.notes.notes_app.model.User;
 import com.Beast.notes.notes_app.repository.NoteRepository;
 import com.Beast.notes.notes_app.repository.TimeCapsuleRepository;
-import com.Beast.notes.notes_app.repository.UserRepository;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,26 +21,16 @@ public class TimeCapsuleController {
 
     private final TimeCapsuleRepository capsuleRepo;
     private final NoteRepository noteRepo;
-    private final UserRepository userRepository;
 
     public TimeCapsuleController(TimeCapsuleRepository capsuleRepo,
-                                 NoteRepository noteRepo, UserRepository userRepository) {
+                                 NoteRepository noteRepo) {
         this.capsuleRepo = capsuleRepo;
         this.noteRepo = noteRepo;
-        this.userRepository = userRepository;
-    }
-
-    private User getCurrentUser() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     @PostMapping("/{noteId}")
     public String createCapsule(@PathVariable Long noteId, @RequestBody TimeCapsuleDto dto) {
-        User currentUser = getCurrentUser();
         Note note = noteRepo.findById(noteId)
-                .filter(n -> n.getUser().getId().equals(currentUser.getId()))
                 .orElseThrow(() -> new RuntimeException("Note not found"));
 
         // Mark as time capsule note
@@ -71,12 +58,7 @@ public class TimeCapsuleController {
 
     @GetMapping
     public List<TimeCapsule> getAllCapsules() {
-        User currentUser = getCurrentUser();
         List<TimeCapsule> capsules = capsuleRepo.findAll();
-        // Filter capsules by current user
-        capsules = capsules.stream()
-                .filter(capsule -> capsule.getNote().getUser().getId().equals(currentUser.getId()))
-                .toList();
         capsules.forEach(capsule -> {
             if (capsule.getNote() != null) {
                 capsule.getNote().getTitle();
@@ -87,10 +69,7 @@ public class TimeCapsuleController {
 
     @DeleteMapping("/{id}")
     public void deleteCapsule(@PathVariable Long id) {
-        User currentUser = getCurrentUser();
-        capsuleRepo.findById(id)
-                .filter(capsule -> capsule.getNote().getUser().getId().equals(currentUser.getId()))
-                .ifPresent(capsule -> capsuleRepo.deleteById(id));
+        capsuleRepo.deleteById(id);
     }
 
     @PostMapping("/{token}/claim")
